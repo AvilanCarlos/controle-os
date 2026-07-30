@@ -263,6 +263,33 @@ const USUARIOS = [
 const USUARIO_KEY = 'usuario-controle-os';
 
 let usuarioAtual = localStorage.getItem(USUARIO_KEY) || '';
+function verificarUsuario(){
+
+  usuarioAtual = localStorage.getItem(USUARIO_KEY) || '';
+
+  if(!usuarioAtual){
+
+    const escolha = prompt(
+      "Quem está usando o sistema?\n\n" +
+      USUARIOS.join("\n")
+    );
+
+    if(escolha && USUARIOS.includes(escolha)){
+
+      usuarioAtual = escolha;
+      localStorage.setItem(USUARIO_KEY, usuarioAtual);
+
+    } else {
+
+      alert("Usuário inválido.");
+      return false;
+
+    }
+
+  }
+
+  return true;
+}  
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const STORAGE_KEY = 'ordens-servico';
 const STORAGE_KEY_ORCAMENTOS = 'ordens-servico-orcamentos';
@@ -853,8 +880,12 @@ function exportCSV(){
 }
 
 (async function init(){
+
+  if(!verificarUsuario()) return;
+
   await loadData();
   renderShell();
+
 })();
 </script>
 </body>
