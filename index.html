@@ -252,6 +252,17 @@ const STAGES = [
 ];
 const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.key, s]));
 const RESPONSAVEIS = ['Karyne', 'Matheus', 'Tiago', 'Lidia', 'Gabriele'];
+const USUARIOS = [
+  'Tiago',
+  'Lidia',
+  'Matheus',
+  'Karyne',
+  'Gabriele'
+];
+
+const USUARIO_KEY = 'usuario-controle-os';
+
+let usuarioAtual = localStorage.getItem(USUARIO_KEY) || '';
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const STORAGE_KEY = 'ordens-servico';
 const STORAGE_KEY_ORCAMENTOS = 'ordens-servico-orcamentos';
@@ -842,8 +853,34 @@ function exportCSV(){
 }
 
 (async function init(){
+
+  usuarioAtual = localStorage.getItem(USUARIO_KEY) || '';
+
+  if(!usuarioAtual){
+
+    const escolha = prompt(
+      "Digite seu nome:\n\n" +
+      USUARIOS.join("\n")
+    );
+
+    if(escolha && USUARIOS.includes(escolha)){
+
+      usuarioAtual = escolha;
+      localStorage.setItem(USUARIO_KEY, usuarioAtual);
+
+    }else{
+
+      alert("Usuário inválido. Atualize a página e tente novamente.");
+      return;
+
+    }
+
+  }
+
   await loadData();
   renderShell();
+
+})();
 })();
 </script>
 </body>
