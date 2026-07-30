@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle de Ordens de Serviço</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root{
+  --bg: #1B1E24;
+  --panel: #242832;
+  --panel-2: #2C313D;
+  --line: #3A4050;
+  --text: #EDEDE6;
+  --text-muted: #9AA0AC;
+  --amber: #E8A33D;
+  --amber-dim: #4A3B22;
+  --teal: #4FB286;
+  --teal-dim: #1E3A30;
+  --blue: #6B9BD1;
+  --blue-dim: #23344A;
+  --red: #D1554A;
+  --red-dim: #3A2422;
+  --purple: #A386C9;
+  --purple-dim: #2E2A3D;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*{ box-sizing: border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar{ height:10px; width:10px; }
+::-webkit-scrollbar-track{ background: var(--bg); }
+::-webkit-scrollbar-thumb{ background: var(--line); border-radius:6px; }
+
+.app{ padding: 24px; max-width: 1600px; margin: 0 auto; }
+
+/* ===== HEADER ===== */
+.header{
+  display:flex; justify-content: space-between; align-items:flex-end;
+  flex-wrap: wrap; gap:16px; margin-bottom: 20px;
+}
+.header h1{
+  font-family: var(--font-display); font-size: 26px; font-weight:700;
+  margin:0 0 4px 0; letter-spacing: -0.3px;
+}
+.header .sub{ color: var(--text-muted); font-size: 13px; }
+.header-actions{ display:flex; gap:10px; }
+
+button{ font-family: var(--font-body); cursor:pointer; border:none; }
+.btn{
+  padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight:600;
+  display:inline-flex; align-items:center; gap:6px; transition: transform .1s ease, filter .15s ease;
+}
+.btn:active{ transform: scale(0.97); }
+.btn-primary{ background: var(--amber); color: #241A08; }
+.btn-primary:hover{ filter: brightness(1.08); }
+.btn-ghost{ background: var(--panel-2); color: var(--text); border:1px solid var(--line); }
+.btn-ghost:hover{ background: #333949; }
+.btn-icon{ background:transparent; color: var(--text-muted); padding:6px; border-radius:6px; }
+.btn-icon:hover{ background: var(--panel-2); color: var(--text); }
+
+/* ===== STATS ===== */
+.stats{
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  gap:12px; margin-bottom: 20px;
+}
+.stat-card{
+  background: var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding: 14px 16px;
+}
+.stat-card .label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color: var(--text-muted); margin-bottom:6px; }
+.stat-card .value{ font-family: var(--font-mono); font-size:20px; font-weight:700; }
+
+/* ===== TOOLBAR ===== */
+.toolbar{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px;
+}
+.toolbar input[type=text], .toolbar select{
+  background: var(--panel); border:1px solid var(--line); color: var(--text);
+  padding: 9px 12px; border-radius:8px; font-size:13px; font-family: var(--font-body);
+}
+.toolbar input[type=text]{ min-width:220px; }
+.toolbar select{ min-width: 170px; }
+
+/* ===== BOARD ===== */
+.board{
+  display:flex; gap:14px; overflow-x:auto; padding-bottom: 14px; align-items:flex-start;
+}
+.column{
+  background: var(--panel); border-radius:12px; min-width: 270px; max-width:270px;
+  flex-shrink:0; display:flex; flex-direction:column; max-height: 74vh;
+  border-top: 3px solid var(--col-color, var(--line));
+}
+.column-head{
+  padding: 12px 14px 10px 14px; display:flex; justify-content:space-between; align-items:center;
+}
+.column-head .title{ font-family: var(--font-display); font-weight:600; font-size:13.5px; }
+.column-head .count{
+  font-family: var(--font-mono); font-size:11px; color: var(--text-muted);
+  background: var(--panel-2); padding: 2px 7px; border-radius: 10px;
+}
+.column-sum{ padding: 0 14px 10px 14px; font-family: var(--font-mono); font-size:11px; color: var(--text-muted); }
+.column-body{
+  padding: 0 10px 10px 10px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;
+}
+.column-body.drop-hover{ background: rgba(232,163,61,0.06); border-radius:8px; }
+
+/* ===== CARD ===== */
+.card{
+  background: var(--panel-2); border:1px solid var(--line); border-radius:9px;
+  padding: 12px 12px 10px 12px; position:relative; cursor:grab;
+}
+.card:active{ cursor:grabbing; }
+.card.cancelada{ opacity: 0.55; }
+.card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+.card-numero{ font-family: var(--font-mono); font-size:11px; color: var(--amber); font-weight:700; letter-spacing:.03em; }
+.card-oc{ font-family: var(--font-mono); font-size:10px; color: var(--text-muted); background: var(--panel); border:1px solid var(--line); padding:1px 6px; border-radius:5px; }
+.card-cliente{ font-family: var(--font-display); font-size:14px; font-weight:600; margin: 2px 0 4px 0; line-height:1.25; }
+.card-desc{ font-size:12px; color: var(--text-muted); margin-bottom:8px; line-height:1.4;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.card-row{ display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-top:4px; }
+.card-valor{ font-family: var(--font-mono); font-weight:700; font-size:13px; }
+.card-desconto{
+  font-family: var(--font-mono); font-size:10.5px; background: var(--red-dim); color:#F0A79B;
+  padding:1px 6px; border-radius:5px;
+}
+.card-nf{
+  font-family: var(--font-mono); font-size:10.5px;
+  padding:2px 7px; border-radius:5px; margin-top:6px; display:inline-flex; align-items:center; gap:4px;
+  border:1px solid transparent; cursor:pointer; user-select:none; transition: filter .15s ease;
+}
+.card-nf:hover{ filter: brightness(1.15); }
+.card-nf.pendente{ background: var(--red-dim); color:#F0A79B; border-color: rgba(209,85,74,0.4); }
+.card-nf.lancada{ background: var(--teal-dim); color: var(--teal); border-color: rgba(79,178,134,0.5); }
+.card-nf .nf-dot{ font-size:10px; }
+
+.stat-card.stat-orcamento{ display:flex; flex-direction:column; }
+.stat-card.stat-orcamento .value-input{
+  background: transparent; border:none; color: var(--text); font-family: var(--font-mono);
+  font-size:20px; font-weight:700; padding:0; width:100%; outline:none; border-bottom:1px dashed var(--line);
+}
+.stat-card.stat-orcamento .value-input:focus{ border-bottom-color: var(--amber); }
+.stat-card.stat-orcamento .mes-label{ font-size:10px; color: var(--text-muted); margin-top:4px; }
+.stat-card.stat-orcamento .mes-select{
+  margin-top:6px; background: var(--panel); border:1px solid var(--line); color: var(--text-muted);
+  font-family: var(--font-mono); font-size:10.5px; border-radius:5px; padding:3px 6px; outline:none;
+  width:100%; cursor:pointer;
+}
+.stat-card.stat-orcamento .mes-select:focus{ border-color: var(--amber); color: var(--text); }
+.orcamento-progress{ margin-top:8px; }
+.orcamento-progress .bar-track{
+  background: var(--panel); border-radius: 5px; height:6px; overflow:hidden; border:1px solid var(--line);
+}
+.orcamento-progress .bar-fill{ height:100%; border-radius:5px; transition: width .2s ease; }
+.orcamento-progress .bar-fill.ok{ background: var(--teal); }
+.orcamento-progress .bar-fill.atencao{ background: var(--amber); }
+.orcamento-progress .bar-fill.estourado{ background: var(--red); }
+.orcamento-progress .pct-label{ font-family: var(--font-mono); font-size:11px; margin-top:5px; display:flex; justify-content:space-between; }
+.orcamento-progress .pct-label .pct-value.ok{ color: var(--teal); }
+.orcamento-progress .pct-label .pct-value.atencao{ color: var(--amber); }
+.orcamento-progress .pct-label .pct-value.estourado{ color: var(--red); }
+.card-responsavel{
+  font-family: var(--font-body); font-weight:600; font-size:10.5px; background: var(--purple-dim); color: var(--purple);
+  padding:1px 7px; border-radius:5px; margin-top:6px; display:inline-block;
+}
+.card-dates{ color: var(--text-muted); font-size:10.5px; margin-top:6px; }
+.card-motivo{ color: #F0A79B; font-size:10.5px; margin-top:6px; font-style:italic; line-height:1.35; }
+.card-controls{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+.move-btns{ display:flex; gap:4px; }
+.move-btns button{
+  background: var(--panel); border:1px solid var(--line); color: var(--text-muted);
+  width:22px; height:22px; border-radius:5px; font-size:11px; display:flex; align-items:center; justify-content:center;
+}
+.move-btns button:hover{ color: var(--text); border-color: var(--amber); }
+.card-actions{ display:flex; gap:4px; }
+
+.stamp{
+  position:absolute; top:-8px; right:8px; font-family: var(--font-mono); font-size:9px;
+  font-weight:700; letter-spacing:.05em; padding:3px 8px; border-radius:4px; transform: rotate(3deg);
+  border: 1px solid; text-transform:uppercase;
+}
+
+.empty-col{ color: var(--text-muted); font-size:12px; text-align:center; padding: 20px 8px; border:1px dashed var(--line); border-radius:8px; margin: 4px 0; }
+
+/* ===== MODAL ===== */
+.overlay{
+  position:fixed; inset:0; background: rgba(10,12,16,0.6); display:flex; align-items:center; justify-content:center;
+  padding: 20px; z-index: 50;
+}
+.modal{
+  background: var(--panel); border:1px solid var(--line); border-radius: 14px; width: 100%; max-width: 480px;
+  max-height: 88vh; overflow-y:auto; padding: 22px;
+}
+.modal h2{ font-family: var(--font-display); font-size:18px; margin: 0 0 16px 0; }
+.field{ margin-bottom: 12px; }
+.field label{ display:block; font-size:11.5px; color: var(--text-muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em; }
+.field input, .field select, .field textarea{
+  width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text);
+  padding:9px 11px; border-radius:7px; font-family: var(--font-body); font-size:13px;
+}
+.field textarea{ resize:vertical; min-height:56px; }
+.field-row{ display:flex; gap:10px; }
+.field-row .field{ flex:1; }
+.modal-actions{ display:flex; justify-content:space-between; margin-top:18px; gap:10px; }
+
+.hint{ font-size:11px; color: var(--text-muted); margin-top: 16px; text-align:center; }
+.loading{ text-align:center; padding: 60px 0; color: var(--text-muted); font-family: var(--font-mono); font-size:13px; }
+
+@media (max-width: 640px){
+  .header{ flex-direction:column; align-items:flex-start; }
+  .board{ gap:10px; }
+  .column{ min-width: 240px; max-width:240px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="loading" id="loading">carregando painel...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const SUPABASE_URL = "https://uzstfwlfeyirusesibcz.supabase.co";
+
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6c3Rmd2xmZXlpcnVzZXNpYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTg2NDgsImV4cCI6MjEwMDk5NDY0OH0.ODin9ubqISSBO8zD9gqQOJmxErdXRKzVjv21Sa1h0ZA";
+
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const STAGES = [
+  { key: 'solicitada', label: 'Solicitada', color: '#6B9BD1' },
+  { key: 'aprovacao', label: 'Em Aprovação', color: '#A386C9' },
+  { key: 'aprovada', label: 'Aprovada', color: '#E8A33D' },
+  { key: 'nota_fiscal', label: 'Nota Fiscal Emitida', color: '#4FB286' },
+  { key: 'concluida', label: 'Concluída', color: '#5FC88F' },
+  { key: 'cancelada', label: 'Cancelada', color: '#D1554A' },
+];
+const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.key, s]));
+const RESPONSAVEIS = ['Karyne', 'Matheus', 'Tiago', 'Lidia', 'Gabriele'];
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const STORAGE_KEY = 'ordens-servico';
+const STORAGE_KEY_ORCAMENTOS = 'ordens-servico-orcamentos';
+
+let orders = [];
+let orcamentos = {}; // { 'YYYY-MM': valorOrcado }
+let editingId = null;
+let dragId = null;
+let filters = { search: '', status: 'todas', mes: 'todos' };
+let orcamentoMesAtivo = null; // mês selecionado no quadro "Valor Orçado" (independente do filtro do board)
+
+function mesAtualKey(){
+  return new Date().toISOString().slice(0,7);
+}
+
+function mesReferencia(){
+  // Se um mês específico estiver filtrado, usamos ele; caso contrário, o mês corrente
+  return filters.mes !== 'todos' ? filters.mes : mesAtualKey();
+}
+
+function getOrcamentoMesOptions(){
+  // Gera uma janela de meses (6 antes, 12 depois do atual) + garante que meses já usados apareçam
+  const set = new Set();
+  const hoje = new Date();
+  for(let i=-6;i<=12;i++){
+    const d = new Date(hoje.getFullYear(), hoje.getMonth()+i, 1);
+    set.add(d.toISOString().slice(0,7));
+  }
+  Object.keys(orcamentos).forEach(m=>set.add(m));
+  orders.forEach(o=>{ if(o.dataAbertura) set.add(o.dataAbertura.slice(0,7)); });
+  return Array.from(set).sort();
+}
+
+function requiresNF(status){
+  return status === 'nota_fiscal' || status === 'concluida';
+}
+
+function requiresMotivo(status){
+  return status === 'cancelada';
+}
+
+function monthLabel(ym){
+  const [y,m] = ym.split('-');
+  return `${MESES_PT[parseInt(m,10)-1]}/${y}`;
+}
+
+function getMonthOptions(){
+  const set = new Set();
+  orders.forEach(o=>{ if(o.dataAbertura) set.add(o.dataAbertura.slice(0,7)); });
+  return Array.from(set).sort().reverse();
+}
+
+function fmtMoney(v){
+  return (v||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function uid(){ return 'os_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function nextNumero(){
+  let max = 0;
+  orders.forEach(o=>{
+    const m = /OS-(\d+)/.exec(o.numero||'');
+    if(m) max = Math.max(max, parseInt(m[1],10));
+  });
+  return 'OS-' + String(max+1).padStart(4,'0');
+}
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    orders = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    orders = [];
+  }
+  try{
+    const res2 = await window.storage.get(STORAGE_KEY_ORCAMENTOS, false);
+    orcamentos = res2 ? JSON.parse(res2.value) : {};
+  }catch(e){
+    orcamentos = {};
+  }
+}
+
+async function saveData(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(orders), false);
+  }catch(e){
+    console.error('Erro ao salvar', e);
+  }
+}
+
+async function saveOrcamentos(){
+  try{
+    await window.storage.set(STORAGE_KEY_ORCAMENTOS, JSON.stringify(orcamentos), false);
+  }catch(e){
+    console.error('Erro ao salvar orçamento', e);
+  }
+}
+
+async function updateOrcamento(mes, valorStr){
+  const v = unmaskMoney(valorStr);
+  if(!v){
+    delete orcamentos[mes];
+  } else {
+    orcamentos[mes] = v;
+  }
+  await saveOrcamentos();
+}
+
+function unmaskMoney(str){
+  if(!str) return 0;
+  const cleaned = String(str).replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',', '.');
+  const v = parseFloat(cleaned);
+  return isNaN(v) ? 0 : v;
+}
+
+function maskMoneyValue(num){
+  if(num == null || num === '') return '';
+  return Number(num).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function onOrcadoInput(el){
+  const digits = el.value.replace(/\D/g,'');
+  if(!digits){ el.value = ''; return; }
+  const num = parseInt(digits,10) / 100;
+  el.value = num.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function computeFaturadoMes(mes){
+  return orders.filter(o=>['nota_fiscal','concluida'].includes(o.status) && o.dataAbertura && o.dataAbertura.slice(0,7)===mes)
+    .reduce((s,o)=>s+valorComDesconto(o),0);
+}
+
+async function toggleNFLancada(id){
+  const o = orders.find(x=>x.id===id);
+  if(!o || !o.notaFiscal) return;
+  o.nfLancada = !o.nfLancada;
+  await saveData();
+  render();
+}
+
+function valorComDesconto(o){
+  const pct = o.descontoPercent || 0;
+  return (o.valor||0) * (1 - pct/100);
+}
+
+function computeStats(){
+  const naoCanceladas = orders.filter(o=>o.status !== 'cancelada');
+  const ativas = naoCanceladas.filter(o=>o.status !== 'concluida');
+  const pipeline = naoCanceladas.reduce((s,o)=>s+valorComDesconto(o),0);
+  const faturado = orders.filter(o=>['nota_fiscal','concluida'].includes(o.status)).reduce((s,o)=>s+valorComDesconto(o),0);
+  const aprovadas = orders.filter(o=>['aprovada','nota_fiscal','concluida'].includes(o.status)).length;
+  const canceladas = orders.filter(o=>o.status==='cancelada').length;
+  const comDesconto = naoCanceladas.filter(o=>(o.descontoPercent||0)>0).length;
+  const comNF = orders.filter(o=>o.notaFiscal);
+  const nfLancadas = comNF.filter(o=>o.nfLancada).length;
+  const nfPendentes = comNF.length - nfLancadas;
+  return { total: ativas.length, pipeline, faturado, aprovadas, canceladas, comDesconto, nfLancadas, nfPendentes };
+}
+
+function matchesFilter(o){
+  const s = filters.search.trim().toLowerCase();
+  const matchSearch = !s || (o.cliente||'').toLowerCase().includes(s) || (o.numero||'').toLowerCase().includes(s) || (o.ordemCompra||'').toLowerCase().includes(s) || (o.descricao||'').toLowerCase().includes(s) || (o.responsavel||'').toLowerCase().includes(s);
+  const matchStatus = filters.status === 'todas' || o.status === filters.status;
+  const matchMes = filters.mes === 'todos' || (o.dataAbertura && o.dataAbertura.slice(0,7) === filters.mes);
+  return matchSearch && matchStatus && matchMes;
+}
+
+function renderShell(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="header">
+      <div>
+        <h1>Controle de Ordens de Serviço</h1>
+        <div class="sub">Acompanhe aprovação, nota fiscal e desconto de cada OS</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" onclick="exportCSV()">⭳ Exportar CSV</button>
+        <button class="btn btn-primary" onclick="openModal()">+ Nova OS</button>
+      </div>
+    </div>
+
+    <div class="stats" id="statsContainer"></div>
+
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="Buscar fornecedor, número ou descrição...">
+      <select id="statusFilter">
+        <option value="todas">Todos os status</option>
+        ${STAGES.map(s=>`<option value="${s.key}">${s.label}</option>`).join('')}
+      </select>
+      <select id="mesFilter">
+        <option value="todos">Todos os meses</option>
+      </select>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="hint">Arraste os cards entre colunas, ou use as setas ◀ ▶. Dados salvos automaticamente e privados a você.</div>
+  `;
+
+  const searchInput = document.getElementById('searchInput');
+  searchInput.value = filters.search;
+  searchInput.addEventListener('input', (e)=>{ filters.search = e.target.value; renderBoard(); });
+
+  const statusFilter = document.getElementById('statusFilter');
+  statusFilter.value = filters.status;
+  statusFilter.addEventListener('change', (e)=>{ filters.status = e.target.value; renderBoard(); });
+
+  document.getElementById('mesFilter').addEventListener('change', (e)=>{ filters.mes = e.target.value; renderBoard(); });
+
+  renderBoard();
+}
+
+function render(){ renderBoard(); }
+
+function renderBoard(){
+  const mesSelect = document.getElementById('mesFilter');
+  const meses = getMonthOptions();
+  if(filters.mes !== 'todos' && !meses.includes(filters.mes)) filters.mes = 'todos';
+  mesSelect.innerHTML = '<option value="todos">Todos os meses</option>' +
+    meses.map(ym=>`<option value="${ym}">${monthLabel(ym)}</option>`).join('');
+  mesSelect.value = filters.mes;
+
+  const stats = computeStats();
+  if(!orcamentoMesAtivo) orcamentoMesAtivo = mesAtualKey();
+  const refMes = orcamentoMesAtivo;
+  const orcadoAtual = orcamentos[refMes] != null ? orcamentos[refMes] : null;
+  const orcadoDisplay = orcadoAtual != null ? maskMoneyValue(orcadoAtual) : '';
+  const faturadoMes = computeFaturadoMes(refMes);
+  let pct = null, pctClass = 'ok';
+  if(orcadoAtual){
+    pct = (faturadoMes / orcadoAtual) * 100;
+    pctClass = pct >= 100 ? 'estourado' : pct >= 80 ? 'atencao' : 'ok';
+  }
+  const mesOpcoes = getOrcamentoMesOptions();
+  document.getElementById('statsContainer').innerHTML = `
+      <div class="stat-card stat-orcamento">
+        <div class="label">Valor Orçado</div>
+        <input class="value-input" id="orcadoInput" type="text" inputmode="decimal"
+               placeholder="0,00" value="${orcadoDisplay}">
+        <select class="mes-select" id="orcadoMesSelect">
+          ${mesOpcoes.map(m=>`<option value="${m}" ${m===refMes?'selected':''}>${monthLabel(m)}</option>`).join('')}
+        </select>
+        ${orcadoAtual ? `
+        <div class="orcamento-progress">
+          <div class="bar-track"><div class="bar-fill ${pctClass}" style="width:${Math.min(pct,100).toFixed(1)}%"></div></div>
+          <div class="pct-label">
+            <span style="color:var(--text-muted);">Faturado ${fmtMoney(faturadoMes)}</span>
+            <span class="pct-value ${pctClass}">${pct.toFixed(0)}%</span>
+          </div>
+        </div>` : ''}
+      </div>
+      <div class="stat-card"><div class="label">OS Ativas</div><div class="value">${stats.total}</div></div>
+      <div class="stat-card"><div class="label">Valor em Pipeline</div><div class="value">${fmtMoney(stats.pipeline)}</div></div>
+      <div class="stat-card"><div class="label">Faturado (NF)</div><div class="value">${fmtMoney(stats.faturado)}</div></div>
+      <div class="stat-card"><div class="label">Aprovadas</div><div class="value">${stats.aprovadas}</div></div>
+      <div class="stat-card"><div class="label">Canceladas</div><div class="value">${stats.canceladas}</div></div>
+      <div class="stat-card"><div class="label">Com Desconto</div><div class="value">${stats.comDesconto}</div></div>
+      <div class="stat-card"><div class="label">NF Lançadas / Pendentes</div><div class="value" style="font-size:16px;">${stats.nfLancadas} <span style="color:var(--text-muted);">/</span> ${stats.nfPendentes}</div></div>
+  `;
+
+  const orcadoInput = document.getElementById('orcadoInput');
+  orcadoInput.addEventListener('input', (e)=> onOrcadoInput(e.target));
+  orcadoInput.addEventListener('change', (e)=>{ updateOrcamento(refMes, e.target.value); render(); });
+
+  document.getElementById('orcadoMesSelect').addEventListener('change', (e)=>{
+    orcamentoMesAtivo = e.target.value;
+    render();
+  });
+
+  document.getElementById('board').innerHTML = STAGES.map(stage=>renderColumn(stage)).join('');
+
+  document.querySelectorAll('.column-body').forEach(col=>{
+    col.addEventListener('dragover', (e)=>{ e.preventDefault(); col.classList.add('drop-hover'); });
+    col.addEventListener('dragleave', ()=> col.classList.remove('drop-hover'));
+    col.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      col.classList.remove('drop-hover');
+      const stage = col.dataset.stage;
+      if(dragId) setStatus(dragId, stage);
+    });
+  });
+}
+
+function renderColumn(stage){
+  const items = orders.filter(o=>o.status===stage.key).filter(matchesFilter);
+  const sum = items.reduce((s,o)=>s+valorComDesconto(o),0);
+  return `
+    <div class="column" style="--col-color:${stage.color}">
+      <div class="column-head">
+        <div class="title">${stage.label}</div>
+        <div class="count">${items.length}</div>
+      </div>
+      ${items.length ? `<div class="column-sum">${fmtMoney(sum)}</div>` : ''}
+      <div class="column-body" data-stage="${stage.key}">
+        ${items.length ? items.map(o=>renderCard(o, stage)).join('') : '<div class="empty-col">Nenhuma OS aqui</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderCard(o, stage){
+  const idx = STAGES.findIndex(s=>s.key===o.status);
+  const prevStage = idx>0 ? STAGES[idx-1] : null;
+  const nextStage = idx<STAGES.length-1 ? STAGES[idx+1] : null;
+  return `
+    <div class="card ${o.status==='cancelada'?'cancelada':''}" draggable="true"
+         ondragstart="dragId='${o.id}'" onclick="openModal('${o.id}')">
+      <div class="card-top">
+        <span class="card-numero">${o.numero}</span>
+        ${o.ordemCompra ? `<span class="card-oc" title="Ordem de Compra">OC ${escapeHtml(o.ordemCompra)}</span>` : ''}
+      </div>
+      <div class="card-cliente">${escapeHtml(o.cliente||'Fornecedor não informado')}</div>
+      ${o.descricao ? `<div class="card-desc">${escapeHtml(o.descricao)}</div>` : ''}
+      <div class="card-row">
+        <span class="card-valor">${fmtMoney(o.valor)}</span>
+        ${o.descontoPercent ? `<span class="card-desconto">-${o.descontoPercent}%</span>` : ''}
+      </div>
+      ${o.descontoPercent ? `<div class="card-row" style="margin-top:2px;"><span style="color:var(--text-muted);font-size:10.5px;">Com desconto</span><span style="font-family:var(--font-mono);font-size:11px;color:var(--teal);">${fmtMoney(valorComDesconto(o))}</span></div>` : ''}
+      <div class="card-row" style="gap:6px; flex-wrap:wrap; justify-content:flex-start;">
+        ${o.notaFiscal ? `<span class="card-nf ${o.nfLancada?'lancada':'pendente'}" title="${o.nfLancada ? 'NF já lançada na planilha de custos (clique para desmarcar)' : 'NF ainda não lançada na planilha de custos (clique para marcar)'}" onclick="event.stopPropagation(); toggleNFLancada('${o.id}')"><span class="nf-dot">${o.nfLancada?'✔':'○'}</span>NF ${escapeHtml(o.notaFiscal)}</span>` : ''}
+        ${o.responsavel ? `<span class="card-responsavel">${escapeHtml(o.responsavel)}</span>` : ''}
+      </div>
+      <div class="card-dates">Aberta ${fmtDate(o.dataAbertura)} ${o.previsao ? '· Previsão ' + fmtDate(o.previsao) : ''}</div>
+      ${o.status==='cancelada' && o.motivoCancelamento ? `<div class="card-motivo">Motivo: ${escapeHtml(o.motivoCancelamento)}</div>` : ''}
+      <div class="card-controls" onclick="event.stopPropagation()">
+        <div class="move-btns">
+          <button title="Voltar etapa" ${!prevStage?'disabled style=opacity:0.3':''} onclick="setStatus('${o.id}','${prevStage?prevStage.key:''}')">◀</button>
+          <button title="Avançar etapa" ${!nextStage?'disabled style=opacity:0.3':''} onclick="setStatus('${o.id}','${nextStage?nextStage.key:''}')">▶</button>
+        </div>
+        <div class="card-actions">
+          <button class="btn-icon" title="Editar" onclick="openModal('${o.id}')">✎</button>
+          <button class="btn-icon" title="Excluir" onclick="deleteOrder('${o.id}')">✕</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+async function setStatus(id, status){
+  if(!status) return;
+  const o = orders.find(x=>x.id===id);
+  if(!o) return;
+
+  if(requiresNF(status) && !o.notaFiscal){
+    const nf = prompt(`Para mover a OS ${o.numero} para "${STAGE_MAP[status].label}", informe o número da Nota Fiscal:`);
+    if(!nf || !nf.trim()){
+      render();
+      return;
+    }
+    o.notaFiscal = nf.trim();
+  }
+
+  if(requiresMotivo(status) && !o.motivoCancelamento){
+    const motivo = prompt(`Para cancelar a OS ${o.numero}, informe o motivo do cancelamento:`);
+    if(!motivo || !motivo.trim()){
+      render();
+      return;
+    }
+    o.motivoCancelamento = motivo.trim();
+  }
+
+  o.status = status;
+  await saveData();
+  render();
+}
+
+function deleteOrder(id){
+  if(!confirm('Excluir esta ordem de serviço? Essa ação não pode ser desfeita.')) return;
+  orders = orders.filter(o=>o.id!==id);
+  saveData();
+  render();
+}
+
+function openModal(id){
+  editingId = id || null;
+  const o = id ? orders.find(x=>x.id===id) : null;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.id = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>${o ? 'Editar OS ' + o.numero : 'Nova Ordem de Serviço'}</h2>
+      <form id="osForm">
+        <div class="field-row">
+          <div class="field">
+            <label>Número da OS</label>
+            <input type="text" name="numero" required value="${escapeHtml(o ? (o.numero||'') : nextNumero())}">
+          </div>
+          <div class="field">
+            <label>Número da Ordem de Compra</label>
+            <input type="text" name="ordemCompra" placeholder="Nº da OC" value="${o ? escapeHtml(o.ordemCompra||'') : ''}">
+          </div>
+        </div>
+        <div class="field">
+          <label>Fornecedor</label>
+          <input type="text" name="cliente" required value="${o ? escapeHtml(o.cliente||'') : ''}">
+        </div>
+        <div class="field">
+          <label>Descrição do serviço</label>
+          <textarea name="descricao">${o ? escapeHtml(o.descricao||'') : ''}</textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Valor (R$)</label>
+            <input type="number" step="0.01" min="0" name="valor" value="${o ? o.valor||'' : ''}">
+          </div>
+          <div class="field">
+            <label>Desconto (%)</label>
+            <input type="number" step="0.1" min="0" max="100" name="descontoPercent" value="${o ? o.descontoPercent||'' : ''}">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Status</label>
+            <select name="status">
+              ${STAGES.map(s=>`<option value="${s.key}" ${o && o.status===s.key ? 'selected':''}>${s.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Responsável</label>
+            <select name="responsavel">
+              <option value="">Selecione...</option>
+              ${RESPONSAVEIS.map(r=>`<option value="${r}" ${o && o.responsavel===r ? 'selected':''}>${r}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Nota fiscal (número)</label>
+          <input type="text" name="notaFiscal" value="${o ? escapeHtml(o.notaFiscal||'') : ''}">
+        </div>
+        <div class="field">
+          <label>Motivo do cancelamento (obrigatório se cancelada)</label>
+          <textarea name="motivoCancelamento">${o ? escapeHtml(o.motivoCancelamento||'') : ''}</textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Data de abertura</label>
+            <input type="date" name="dataAbertura" value="${o ? o.dataAbertura||'' : new Date().toISOString().slice(0,10)}">
+          </div>
+          <div class="field">
+            <label>Previsão de conclusão</label>
+            <input type="date" name="previsao" value="${o ? o.previsao||'' : ''}">
+          </div>
+        </div>
+        <div class="field">
+          <label>Observações</label>
+          <textarea name="observacoes">${o ? escapeHtml(o.observacoes||'') : ''}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">${o ? 'Salvar alterações' : 'Criar OS'}</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+  document.getElementById('osForm').addEventListener('submit', submitForm);
+}
+
+function closeModal(){
+  const overlay = document.getElementById('overlay');
+  if(overlay) overlay.remove();
+  editingId = null;
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd.entries());
+  data.valor = parseFloat(data.valor) || 0;
+  data.descontoPercent = parseFloat(data.descontoPercent) || 0;
+
+  data.numero = (data.numero||'').trim();
+  if(!data.numero){
+    alert('Informe o número da OS.');
+    return;
+  }
+  const duplicada = orders.find(o=>o.numero===data.numero && o.id!==editingId);
+  if(duplicada){
+    alert('Já existe uma OS com o número "' + data.numero + '". Escolha outro número.');
+    return;
+  }
+
+  if(requiresNF(data.status) && !data.notaFiscal.trim()){
+    alert('Para o status "' + STAGE_MAP[data.status].label + '" é obrigatório informar o número da Nota Fiscal.');
+    return;
+  }
+
+  if(requiresMotivo(data.status) && !data.motivoCancelamento.trim()){
+    alert('Para cancelar a OS é obrigatório informar o motivo do cancelamento.');
+    return;
+  }
+
+  if(editingId){
+    const o = orders.find(x=>x.id===editingId);
+    Object.assign(o, data);
+  } else {
+    orders.push({
+      id: uid(),
+      criadoEm: Date.now(),
+      nfLancada: false,
+      ...data
+    });
+  }
+  await saveData();
+  closeModal();
+  render();
+}
+
+function exportCSV(){
+  const headers = ['Numero','OrdemCompra','Fornecedor','Descricao','Valor','Desconto(%)','ValorComDesconto','Status','Responsavel','NotaFiscal','NFLancadaNaPlanilha','MotivoCancelamento','DataAbertura','Previsao','Observacoes'];
+  const rows = orders.map(o=>[
+    o.numero, o.ordemCompra||'', o.cliente, (o.descricao||'').replace(/\n/g,' '), o.valor, o.descontoPercent||0,
+    valorComDesconto(o).toFixed(2), STAGE_MAP[o.status]?.label || o.status, o.responsavel||'', o.notaFiscal||'',
+    o.notaFiscal ? (o.nfLancada ? 'Sim' : 'Não') : '', o.motivoCancelamento||'',
+    o.dataAbertura||'', o.previsao||'', (o.observacoes||'').replace(/\n/g,' ')
+  ]);
+  const csv = [headers, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ordens-servico-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+(async function init(){
+  await loadData();
+  renderShell();
+})();
+</script>
+</body>
+</html>
