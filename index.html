@@ -324,34 +324,85 @@ function nextNumero(){
 }
 
 async function loadData(){
+
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    orders = res ? JSON.parse(res.value) : [];
+
+    const { data, error } = await supabaseClient
+      .from('ordens')
+      .select('*')
+      .limit(1);
+
+    if(error) throw error;
+
+    if(data && data.length > 0){
+
+      orders = data[0].dados || [];
+      orcamentos = data[0].orcamentos || {};
+
+    } else {
+
+      orders = [];
+      orcamentos = {};
+
+      await supabaseClient
+        .from('ordens')
+        .insert({
+          id: crypto.randomUUID(),
+          dados: [],
+          criado_em: new Date()
+        });
+
+    }
+
   }catch(e){
+
+    console.error("Erro carregando dados:", e);
     orders = [];
-  }
-  try{
-    const res2 = await window.storage.get(STORAGE_KEY_ORCAMENTOS, false);
-    orcamentos = res2 ? JSON.parse(res2.value) : {};
-  }catch(e){
     orcamentos = {};
+
   }
+
 }
+
 
 async function saveData(){
+
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(orders), false);
+
+    const { data, error } = await supabaseClient
+      .from('ordens')
+      .select('id')
+      .limit(1);
+
+    if(error) throw error;
+
+
+    if(data && data.length > 0){
+
+      await supabaseClient
+        .from('ordens')
+        .update({
+          dados: orders,
+          criado_em: new Date()
+        })
+        .eq('id', data[0].id);
+
+    }
+
+
   }catch(e){
-    console.error('Erro ao salvar', e);
+
+    console.error("Erro salvando dados:", e);
+
   }
+
 }
 
+
 async function saveOrcamentos(){
-  try{
-    await window.storage.set(STORAGE_KEY_ORCAMENTOS, JSON.stringify(orcamentos), false);
-  }catch(e){
-    console.error('Erro ao salvar orçamento', e);
-  }
+
+  await saveData();
+
 }
 
 async function updateOrcamento(mes, valorStr){
